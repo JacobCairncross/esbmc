@@ -313,7 +313,10 @@ __ESBMC_HIDE:;
 int pthread_mutex_unlock_noassert(pthread_mutex_t *mutex)
 {
 __ESBMC_HIDE:;
+__ESBMC_atomic_begin();
+__ESBMC_assume(__ESBMC_mutex_lock_field(*mutex));
   __ESBMC_mutex_lock_field(*mutex) = 0;
+  __ESBMC_atomic_end();
   return 0;
 }
 
