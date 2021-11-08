@@ -117,7 +117,7 @@ execution_statet::execution_statet(
   DFS_traversed[0] = false;
   mon_thread_warning = false;
 
-  thread_cswitch_threshold = 1;
+  thread_cswitch_threshold = 0;
 }
 
 execution_statet::execution_statet(const execution_statet &ex)
