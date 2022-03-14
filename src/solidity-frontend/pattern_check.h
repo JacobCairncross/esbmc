@@ -9,6 +9,9 @@
 #include <fmt/core.h>
 #include <nlohmann/json.hpp>
 #include <solidity-frontend/solidity_grammar.h>
+#include <iostream>
+#include <fstream>
+#include <solidity-frontend/pattern_format_check.h>
 
 class pattern_checker
 {
@@ -20,6 +23,7 @@ class pattern_checker
 public:
   pattern_checker(
     const nlohmann::json &_ast_nodes,
+    int contractIndex,
     const std::string &_target_func,
     const messaget &msg);
   virtual ~pattern_checker() = default;
@@ -33,8 +37,15 @@ public:
   void check_require_argument(const nlohmann::json &call_args);
   void check_tx_origin(const nlohmann::json &left_expr);
 
+  // Lonely Number
+  void check_lonely_number(const nlohmann::json &func);
+
+  //Simple Pattern Checker
+  bool start_simple_pattern_check();
+
 protected:
   const nlohmann::json &ast_nodes;
+  int contractIndex;
   const std::string target_func; // function to be verified
   const messaget &msg;
 };

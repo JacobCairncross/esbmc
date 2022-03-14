@@ -64,7 +64,7 @@ bool solidity_convertert::convert()
       // pattern-based verification
       assert(itr->contains("nodes"));
       auto pattern_check =
-        std::make_unique<pattern_checker>((*itr)["nodes"], sol_func, msg);
+        std::make_unique<pattern_checker>(ast_json,index, sol_func, msg);
       if(pattern_check->do_pattern_check())
         return true; // 'true' indicates something goes wrong.
     }

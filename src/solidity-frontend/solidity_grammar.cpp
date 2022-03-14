@@ -84,6 +84,10 @@ TypeNameT get_type_name_t(const nlohmann::json &type_name)
       // FunctionToPointer decay in CallExpr when making a function call
       return Pointer;
     }
+    else if(type_name["typeString"] == "address")
+    {
+      assert(!"Address type");
+    }
     else if(
       type_name["typeIdentifier"].get<std::string>().find("ArrayToPtr") !=
       std::string::npos)
@@ -313,6 +317,7 @@ const char *statement_to_str(StatementT type)
 // rule expression
 ExpressionT get_expression_t(const nlohmann::json &expr)
 {
+  assert(expr.contains("nodeType")); // make sure the JSON object has this key
   if(expr["nodeType"] == "Assignment" || expr["nodeType"] == "BinaryOperation")
   {
     return BinaryOperatorClass;

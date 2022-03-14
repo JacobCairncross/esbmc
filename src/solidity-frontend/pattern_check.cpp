@@ -1,10 +1,12 @@
 #include <solidity-frontend/pattern_check.h>
+void printValueOrKids(nlohmann::json node);
 
 pattern_checker::pattern_checker(
   const nlohmann::json &_ast_nodes,
+  int contractIndex,
   const std::string &_target_func,
   const messaget &msg)
-  : ast_nodes(_ast_nodes), target_func(_target_func), msg(msg)
+  : ast_nodes(_ast_nodes), contractIndex(contractIndex), target_func(_target_func), msg(msg)
 {
 }
 
@@ -12,10 +14,10 @@ bool pattern_checker::do_pattern_check()
 {
   // TODO: add more functions here to perform more pattern-based checks
   msg.status(fmt::format("Checking function {} ...", target_func.c_str()));
-
+  nlohmann::json contractBody = ast_nodes["nodes"][contractIndex]["nodes"];
   unsigned index = 0;
-  for(nlohmann::json::const_iterator itr = ast_nodes.begin();
-      itr != ast_nodes.end();
+  for(nlohmann::json::const_iterator itr = contractBody.begin();
+      itr != contractBody.end();
       ++itr, ++index)
   {
     if(
@@ -31,13 +33,18 @@ bool pattern_checker::do_pattern_check()
     }
   }
 
+
+
   return false;
 }
 
 bool pattern_checker::start_pattern_based_check(const nlohmann::json &func)
 {
   // SWC-115: Authorization through tx.origin
+  start_simple_pattern_check();
+
   check_authorization_through_tx_origin(func);
+  check_lonely_number(func);
   return false;
 }
 
@@ -80,11 +87,7 @@ void pattern_checker::check_require_call(const nlohmann::json &expr)
     if(expr["expression"]["name"].get<std::string>() == "require")
     {
       const nlohmann::json &call_args = expr["arguments"];
-      // Search for tx.origin in BinaryOperation (==) as used in require(tx.origin == <VarDeclReference>)
-      // There should be just one argument, the BinaryOpration expression.
-      // Checking 1 argument as in require(<leftExpr> == <rightExpr>)
-      if(call_args.size() == 1)
-        check_require_argument(call_args);
+      check_require_argument(call_args);
     }
   }
 }
@@ -121,4 +124,42 @@ void pattern_checker::check_tx_origin(const nlohmann::json &left_expr)
         assert(!"Found vulnerability SWC-115 Authorization through tx.origin");
     }
   }
+}
+
+void pattern_checker::check_lonely_number(const nlohmann::json &func){
+  const nlohmann::json &body_stmt = func["body"]["statements"];
+  msg.progress(
+    "  - Pattern-based checking: Lonely number");
+
+  unsigned index = 0;
+  for(nlohmann::json::const_iterator itr = body_stmt.begin();
+      itr != body_stmt.end();
+      ++itr, ++index)
+  {
+    msg.status(fmt::format(" checking function body stmt {}", index));
+    if(itr->contains("nodeType"))
+    {
+      if((*itr)["nodeType"].get<std::string>() == "VariableDeclarationStatement")
+      {
+        if((*itr)["initialValue"]["value"] == "1"){
+          const nlohmann::json &expr = (*itr)["declarations"][0];
+          if(expr["nodeType"] == "VariableDeclaration")
+          {
+            if(expr["name"] == "lonely")
+                assert(!"Found lonely number");
+          }
+        }
+      }
+    }
+  }
+
+
+}
+
+//Need to make it so it can traverse the pattern nodes, then after it goes down check if there is a corresponding child in selected nodes and then go down that. Repeat until end
+
+bool pattern_checker::start_simple_pattern_check(){
+  pattern_format_checker* pfc = new pattern_format_checker(ast_nodes);
+  pfc->do_pattern_check();
+  return true;
 }
