@@ -7,205 +7,84 @@ pattern_format_checker::pattern_format_checker(const nlohmann::json &_ast_nodes)
 bool pattern_format_checker::do_pattern_check()
 {
   std::cout << "In pattern format checeker" <<std::endl;
-  std::ifstream ifs("./savedPattern.json");
+  std::ifstream ifs("./savedPatternItem.json");
   nlohmann::json patternNodes = nlohmann::json::parse(ifs);
-  pattern_rule* patternRule = new pattern_rule(nlohmann::json::value_t::object, pattern_rule::RuleType::key, "nodeType");
   std::cout << "=========== Pattern rule ============" << std::endl;
-  std::cout << patternRule->key_value() <<std::endl;
   bool patternMatches = printValueOrKids(patternNodes, ast_nodes, 0);
   std::cout << "PatternMatch: " << patternMatches << std::endl;
+  return patternMatches;
 }
 
 bool pattern_format_checker::printValueOrKids(nlohmann::json patternNode, nlohmann::json currentASTNode, int depth)
 {
   std::string indent(4 * depth, ' ');
-  switch(patternNode.type())
-  {
-  case nlohmann::json::value_t::object:
-  {
-    //Check all keys. If they match then check their value, children. Return true iff all keys return true (i.e match the pattern)
-    for(auto &elem : patternNode.items())
-    {
-      std::cout << indent << elem.key() << " |" << patternNode.type_name()
-                << std::endl;
-      pattern_rule rule =
-        pattern_rule(nlohmann::json::value_t::object, pattern_rule::key);
-      rule.set_key_value(elem.key());
-      boost::optional<nlohmann::json> matchResult = check_AST_matches_pattern(currentASTNode, rule);
-      if(matchResult)
-      {
-        if(!printValueOrKids(elem.value(), matchResult.get(), ++depth)){
-          return false;
+  //Extract rules object from pattern node
+  pattern_rule* rule = make_rule(patternNode["ruleObject"]);
+//  std::cout << indent << "Trying rule: " << rule->rule_name() << " with value: " << boost::get<std::string>(rule->get_value()) << std::endl;
+//    std::cout << indent << "Rule name: " << rule->rule_name() << " with value: " << boost::get<std::string>(rule->get_value()) << std::endl;
+
+  if(rule->rule_type() == pattern_rule::pass){
+    //In this scenario we know the result will match, by definition it passes the check. We just need to check if any
+    //of the AST nodes children passes their checks. This could span out exponentially so pass should be used sparingly
+    for(auto childNode : currentASTNode.items()){
+      for(auto rule : patternNode["children"].items()){
+        std::cout <<indent<< "Checking node " << childNode.key() << ", with rule " << rule.value()["ruleObject"]["rule"] << std::endl;
+
+        if(printValueOrKids(rule.value(), childNode.value(), depth+1)){
+          std::cout << indent << "This is true " << std::endl;
+          return true;
         }
       }
-      else
-      {
+    }
+    std::cout << indent << "This is false " << std::endl;
+    return false;
+  }
+  boost::optional<nlohmann::json> matchResult = check_AST_matches_pattern(currentASTNode, *rule);
+  if(matchResult)
+  {
+    //TODO: Possibly include groups in the pattern rules
+    for(auto childRules : patternNode["children"]){
+      if(!printValueOrKids(childRules, matchResult.get(), depth+1)){
+        std::cout << indent << "This is false " << std::endl;
+
         return false;
       }
     }
+    std::cout << indent << "This is true " << std::endl;
+
     return true;
-    break;
+  }
+  else{
+    std::cout<< indent  << "This is false " << std::endl;
+
+    return false;
   }
 
-  case nlohmann::json::value_t::array:
-  {
-    for(auto &elem : patternNode.items())
-    {
-      std::cout << indent << elem.key() << " |" << patternNode.type_name()
-                << std::endl;
-      pattern_rule rule =
-        pattern_rule(nlohmann::json::value_t::array, pattern_rule::index);
-      if(depth == 4){
-        rule.set_index_value(3);
-      }
-      else{
-        rule.set_index_value(0);
-      }
-      boost::optional<nlohmann::json> matchResult =
-        check_AST_matches_pattern(currentASTNode, rule);
-      if(matchResult)
-      {
-        if(!printValueOrKids(elem.value(), matchResult.get(), ++depth))
-        {
-          return false;
-        }
-      }
-      else
-      {
-        return false;
-      }
-    }
-    return true;
-    break;
-  }
-  case nlohmann::json::value_t::string:
-  {
-    std::cout << indent
-              << "This is a string:  " << patternNode.get<std::string>()
-              << std::endl;
-    pattern_rule rule =
-      pattern_rule(nlohmann::json::value_t::string, pattern_rule::literalValue);
-    //TODO: Need to set value type for all other literls for the rest to work
-    rule.set_value_type(nlohmann::json::value_t::string);
-    rule.set_string_value(patternNode.get<std::string>());
-    boost::optional<nlohmann::json> matchResult =
-      check_AST_matches_pattern(currentASTNode, rule);
-    if(matchResult)
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-    break;
-  }
-
-  case nlohmann::json::value_t::boolean:
-  {
-    std::cout << indent << "This is a bool:  " << nlohmann::to_string(patternNode) << std::endl;
-    pattern_rule rule = pattern_rule(nlohmann::json::value_t::boolean, pattern_rule::literalValue);
-    rule.set_value_type(nlohmann::json::value_t::boolean);
-    rule.set_bool_value(patternNode.get<bool>());
-    boost::optional<nlohmann::json> matchResult = check_AST_matches_pattern(currentASTNode, rule);
-    if(matchResult){
-      return true;
-    }
-    else{
-      return false;
-    }
-    break;
-  }
-
-
-  case nlohmann::json::value_t::number_float:
-  {
-    std::cout << indent << "This is a float:  " << nlohmann::to_string(patternNode)
-              << std::endl;
-    pattern_rule rule = pattern_rule(
-      nlohmann::json::value_t::number_float, pattern_rule::literalValue);
-    rule.set_value_type(nlohmann::json::value_t::number_float);
-    rule.set_float_value(patternNode.get<float>());
-    boost::optional<nlohmann::json> matchResult =
-      check_AST_matches_pattern(currentASTNode, rule);
-    if(matchResult)
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-    break;
-  }
-
-  case nlohmann::json::value_t::number_integer:
-  {
-    std::cout << indent << "This is a int:  " << nlohmann::to_string(patternNode) << std::endl;
-    pattern_rule rule = pattern_rule(
-      nlohmann::json::value_t::number_integer, pattern_rule::literalValue);
-    rule.set_value_type(nlohmann::json::value_t::number_integer);
-    rule.set_int_value(patternNode.get<int>());
-    boost::optional<nlohmann::json> matchResult =
-      check_AST_matches_pattern(currentASTNode, rule);
-    if(matchResult)
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-    break;
-  }
-
-  case nlohmann::json::value_t::number_unsigned:
-  {
-    std::cout << indent << "This is a unsigned num:  " << nlohmann::to_string(patternNode)
-              << std::endl;
-    pattern_rule rule = pattern_rule(
-      nlohmann::json::value_t::number_unsigned, pattern_rule::literalValue);
-    rule.set_value_type(nlohmann::json::value_t::number_unsigned);
-    rule.set_uint_value(patternNode.get<int>());
-    boost::optional<nlohmann::json> matchResult =
-      check_AST_matches_pattern(currentASTNode, rule);
-    if(matchResult)
-    {
-      return true;
-    }
-    else
-    {
-      return false;
-    }
-    break;
-  }
-
-  case nlohmann::json::value_t::null:
-    std::cout << indent << "This is null:  " << nlohmann::to_string(patternNode) << std::endl;
-    break;
-
-  default:
-    std::cout << "This node has an unrecognized type" << std::endl;
-    std::cout << patternNode.type_name() << std::endl;
-  }
 }
 
 boost::optional<nlohmann::json> pattern_format_checker::check_AST_matches_pattern(nlohmann::json node, pattern_rule rule){
   //Could refactor this from switch to 3 ifs on node, is_object, is_array, is_primitive. Check it out once this works
   switch(rule.rule_type())
   {
+  case pattern_rule::root:
+    return boost::optional<nlohmann::json>{node};
   case pattern_rule::key:
     if(!node.is_object())
     {
       //If we're checking for the key of non-object something has gone wrong
       return boost::optional<nlohmann::json>{};
     }
-    if(node.contains(rule.key_value()))
+    for(auto item : node.items()){
+      std::cout << "Key in obj: " << item.key() << ", ";
+    }
+    std::cout << std::endl;
+    if(node.contains(boost::get<std::string>(rule.get_value())))
     {
-      return boost::optional<nlohmann::json>{node[rule.key_value()]};
+      return boost::optional<nlohmann::json>{node[boost::get<std::string>(rule.get_value())]};
     }
     else
     {
+      std::cout << "Node did not contain key: " << boost::get<std::string>(rule.get_value()) << std::endl;
       return boost::optional<nlohmann::json>{};
     }
     break;
@@ -218,6 +97,7 @@ boost::optional<nlohmann::json> pattern_format_checker::check_AST_matches_patter
     }
     else
     {
+      std::cout << "Node did not match literal value of: " << boost::get<std::string>(rule.get_value()) << std::endl;
       return boost::optional<nlohmann::json>{};
     }
     break;
@@ -228,12 +108,13 @@ boost::optional<nlohmann::json> pattern_format_checker::check_AST_matches_patter
       //If we try to find the size of a non array something has went wrong
       return boost::optional<nlohmann::json>{};
     }
-    if(node.size() == rule.size_value())
+    if(node.size() == boost::get<int>(rule.get_value()))
     {
       return node;
     }
     else
     {
+      std::cout << "Array was not of size: " << boost::get<int>(rule.get_value()) << std::endl;
       return boost::optional<nlohmann::json>{};
     }
   case pattern_rule::index:
@@ -242,11 +123,13 @@ boost::optional<nlohmann::json> pattern_format_checker::check_AST_matches_patter
       //If we try to find the size of a non array something has went wrong
       return boost::optional<nlohmann::json>{};
     }
-    if(node.size() > rule.index_value())
+    int value = boost::get<int>(rule.get_value());
+    if(node.size() > value)
     {
-      return boost::optional<nlohmann::json>{node[rule.index_value()]};
+      return boost::optional<nlohmann::json>{node[value]};
     }
     else{
+      std::cout << "Array is of size: " << node.size() << " but rule requested index of " << boost::get<int>(rule.get_value()) << std::endl;
       return boost::optional<nlohmann::json>{};
     }
 
@@ -315,3 +198,32 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
     }
   }
 }
+
+pattern_rule* pattern_format_checker::make_rule(nlohmann::json ruleObject){
+  std::cout << ruleObject.dump() << std::endl;
+  pattern_rule::RuleType ruleType;
+  //TODO: make a value extractor function because this takes everything as strings. Make something that tries ints and floats before falling back on strings
+  boost::variant<std::string, int, float> value = ruleObject["value"].get<std::string>();
+  std::string ruleString = to_string(ruleObject["rule"]);
+
+  if(ruleString == "\"PASS\""){
+    ruleType = pattern_rule::RuleType::pass;
+  }
+  else if(ruleString == "\"KEY\""){
+    ruleType = pattern_rule::RuleType::key;
+  }
+  else if(ruleString == "\"SIZE\""){
+    ruleType = pattern_rule::RuleType::size;
+
+  }
+  else if(ruleString == "\"INDEX\""){
+    ruleType = pattern_rule::RuleType::index;
+  }
+  else if(ruleString == "\"LITERAL_VALUE\""){
+    ruleType = pattern_rule::RuleType::literalValue;
+  }
+  pattern_rule* rule = new pattern_rule(ruleType);
+  rule->set_value(value);
+  return rule;
+}
+

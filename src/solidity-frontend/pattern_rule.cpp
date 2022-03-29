@@ -1,5 +1,16 @@
 #include "pattern_rule.h"
 
+pattern_rule::pattern_rule(RuleType _ruleType){
+  ruleType = _ruleType;
+}
+
+pattern_rule::pattern_rule(RuleType _ruleType, boost::variant<std::string, int, float> _value){
+  ruleType = _ruleType;
+  value = _value;
+
+}
+
+
 pattern_rule::pattern_rule(nlohmann::json::value_t _nodeType, RuleType _ruleType){
   nodeType = _nodeType;
   ruleType = _ruleType;
@@ -22,6 +33,25 @@ nlohmann::json::value_t pattern_rule::node_type(){
 pattern_rule::RuleType pattern_rule::rule_type(){
   return ruleType;
 }
+std::string pattern_rule::rule_name(){
+  switch(ruleType){
+  case root:
+    return "ROOT";
+  case key:
+    return "KEY";
+  case size:
+    return "SIZE";
+  case index:
+    return "INDEX";
+  case literalValue:
+    return "LITERAL_VALUE";
+  case contains:
+    return "CONTAINS";
+  case pass:
+    return "PASS";
+  }
+}
+
 std::string pattern_rule::key_value(){
   return keyValue;
 }
@@ -52,6 +82,10 @@ int pattern_rule::index_value(){
   return indexValue;
 }
 
+boost::variant<std::string, int, float> pattern_rule::get_value(){
+  return value;
+}
+
 void pattern_rule::set_key_value(std::string value){
   keyValue = value;
 }
@@ -78,4 +112,8 @@ void pattern_rule::set_size_value(int value){
 }
 void pattern_rule::set_index_value(int value){
   indexValue = value;
+}
+
+void pattern_rule::set_value(boost::variant<std::string, int, float> _value){
+  value = _value;
 }

@@ -4,6 +4,7 @@
 #include <fstream>
 #include <boost/optional.hpp>
 #include <solidity-frontend/pattern_rule.h>
+#include <boost/variant.hpp>
 
 class pattern_format_checker
 {
@@ -15,6 +16,7 @@ public:
   bool do_pattern_check();
   boost::optional<nlohmann::json> check_AST_matches_pattern(nlohmann::json node, pattern_rule rule);
   bool literal_matches(nlohmann::json node, pattern_rule rule);
+  pattern_rule* make_rule(nlohmann::json ruleObject);
 
 
 protected:

@@ -2,18 +2,22 @@
 #define ESBMC_PATTERN_RULE_H
 
 #include <nlohmann/json.hpp>
+#include <boost/variant.hpp>
 
 class pattern_rule
 {
 public:
-  enum RuleType{key, literalValue, index, size, contains};
+  enum RuleType{root, pass, key, literalValue, index, size, contains};
   //This constructor produces a useless rule as it doesn't have any value immediately so will need to use a setter to set the appropriate value
+  pattern_rule(RuleType _ruleType);
+  pattern_rule(RuleType _ruleType, boost::variant<std::string, int, float> _value);
   pattern_rule(nlohmann::json::value_t _nodeType, RuleType _ruleType);
   pattern_rule(nlohmann::json::value_t _nodeType, RuleType _ruleType, std::string _key);
   pattern_rule(nlohmann::json::value_t _nodeType, RuleType _ruleType, nlohmann::json::value_t _valueType, std::string _stringVal);
   //TODO: Add more constructors
   nlohmann::json::value_t node_type();
   RuleType rule_type();
+  std::string rule_name();
   std::string key_value();
   //Value of literal can be string, signed int, unsigned int, float, bool
   nlohmann::json::value_t value_type();
@@ -26,6 +30,8 @@ public:
   bool bool_value();
   int size_value();
   int index_value();
+  boost::variant<std::string, int, float> get_value();
+
 
   //Setters, maybe return bool to indicate success or fail?
   void set_key_value(std::string value);
@@ -37,6 +43,7 @@ public:
   void set_bool_value(bool value);
   void set_size_value(int value);
   void set_index_value(int value);
+  void set_value(boost::variant<std::string, int, float> _value);
 
 private:
   nlohmann::json::value_t nodeType;
@@ -50,6 +57,7 @@ private:
   bool boolValue;
   int sizeValue;
   int indexValue;
+  boost::variant<std::string, int, float> value;
 };
 
 #endif //ESBMC_PATTERN_RULE_H
