@@ -17,6 +17,7 @@ public:
   boost::optional<nlohmann::json> check_AST_matches_pattern(nlohmann::json node, pattern_rule rule);
   bool literal_matches(nlohmann::json node, pattern_rule rule);
   pattern_rule* make_rule(nlohmann::json ruleObject);
+  boost::variant<std::string, int, float> extract_value(nlohmann::json valueNode);
 
 
 protected:
