@@ -5,6 +5,7 @@
 #include <boost/optional.hpp>
 #include <solidity-frontend/pattern_rule.h>
 #include <boost/variant.hpp>
+#include <boost/filesystem.hpp>
 
 class pattern_format_checker
 {

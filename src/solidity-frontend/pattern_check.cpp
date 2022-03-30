@@ -44,7 +44,6 @@ bool pattern_checker::start_pattern_based_check(const nlohmann::json &func)
   start_simple_pattern_check();
 
   check_authorization_through_tx_origin(func);
-  check_lonely_number(func);
   return false;
 }
 
