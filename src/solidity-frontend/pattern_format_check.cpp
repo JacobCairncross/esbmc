@@ -27,7 +27,6 @@ bool pattern_format_checker::printValueOrKids(nlohmann::json patternNode, nlohma
   std::string indent(4 * depth, ' ');
   //Extract rules object from pattern node
   pattern_rule* rule = make_rule(patternNode["ruleObject"]);
-
   if(rule->rule_type() == pattern_rule::pass){
     //In this scenario we know the result will match, by definition it passes the check. We just need to check if any
     //of the AST nodes children passes their checks. This could span out exponentially so pass should be used sparingly
@@ -141,13 +140,10 @@ boost::optional<nlohmann::json> pattern_format_checker::check_AST_matches_patter
 
 bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule rule){
 
-  if(node.type() == rule.value_type()){
-    //Want another switch inside here? probs better to make another function so this doesn't get crowded
-    //For each literal type convert node value to it and then compare with rule value
-    //still confused about iterators with nlohmann though
+    std::cout << "Type name: " << node.type_name() << std::endl;
     switch(node.type()){
     case nlohmann::json::value_t::number_unsigned:
-      if(node.get<int>() == rule.uint_value()){
+      if(node.get<int>() == boost::get<int>(rule.get_value())){
         return true;
       }
       else{
@@ -155,7 +151,7 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
       }
       break;
     case nlohmann::json::value_t::number_integer:
-      if(node.get<int>() == rule.int_value()){
+      if(node.get<int>() == boost::get<int>(rule.get_value())){
         return true;
       }
       else{
@@ -163,7 +159,7 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
       }
       break;
     case nlohmann::json::value_t::number_float:
-      if(node.get<float>() == rule.float_value()){
+      if(node.get<float>() == boost::get<float>(rule.get_value())){
         return true;
       }
       else{
@@ -171,7 +167,7 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
       }
       break;
     case nlohmann::json::value_t::string:
-      if(node.get<std::string>() == rule.string_value()){
+      if(node.get<std::string>() == boost::get<std::string>(rule.get_value())){
         return true;
       }
       else{
@@ -179,7 +175,7 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
       }
       break;
     case nlohmann::json::value_t::boolean:
-      if(node.get<bool>() == rule.bool_value()){
+      if(node.get<bool>() == boost::get<bool>(rule.get_value())){
         return true;
       }
       else{
@@ -187,13 +183,15 @@ bool pattern_format_checker::literal_matches(nlohmann::json node, pattern_rule r
       }
       break;
     }
-  }
 }
 
 pattern_rule* pattern_format_checker::make_rule(nlohmann::json ruleObject){
-  pattern_rule::RuleType ruleType;
+  std::cout << ruleObject.dump() <<std::endl;
+  //Default ruletype as pass
+  pattern_rule::RuleType ruleType = pattern_rule::RuleType::pass;
   //TODO: make a value extractor function because this takes everything as strings. Make something that tries ints and floats before falling back on strings
-  boost::variant<std::string, int, float> value = extract_value(ruleObject["value"]);
+  boost::variant<std::string, int, float, bool> value = extract_value(ruleObject["value"]);
+  std::cout << "Value extracted" <<std::endl;
   std::string ruleString = to_string(ruleObject["rule"]);
 
   if(ruleString == "\"ROOT\""){
@@ -224,13 +222,19 @@ boost::variant<std::string, int, float> pattern_format_checker::extract_value(nl
 
   switch(valueNode.type()){
   case nlohmann::json::value_t::number_float:
-    return boost::variant<std::string, int, float>(valueNode.get<float>());
+    return boost::variant<std::string, int, float, bool>(valueNode.get<float>());
   case nlohmann::json::value_t::string:
-    return boost::variant<std::string, int, float>(valueNode.get<std::string>());
+    return boost::variant<std::string, int, float, bool>(valueNode.get<std::string>());
   case nlohmann::json::value_t::number_integer:
-    return boost::variant<std::string, int, float>(valueNode.get<int>());
+    return boost::variant<std::string, int, float, bool>(valueNode.get<int>());
   case nlohmann::json::value_t::number_unsigned:
-    return boost::variant<std::string, int, float>(valueNode.get<int>());
-}
+    return boost::variant<std::string, int, float, bool>(valueNode.get<int>());
+  case nlohmann::json::value_t::boolean:
+    return boost::variant<std::string, int, float, bool>(valueNode.get<bool>());
+  default:
+    std::cout << "Default value extracted" <<std::endl;
+    return boost::variant<std::string, int, float, bool>();
+
+  }
 }
 
