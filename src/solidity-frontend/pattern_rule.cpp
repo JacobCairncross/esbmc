@@ -10,10 +10,6 @@ pattern_rule::pattern_rule(RuleType _ruleType, boost::variant<std::string, int, 
 
 }
 
-
-nlohmann::json::value_t pattern_rule::node_type(){
-  return nodeType;
-}
 pattern_rule::RuleType pattern_rule::rule_type(){
   return ruleType;
 }
@@ -39,6 +35,19 @@ std::string pattern_rule::rule_name(){
 
 boost::variant<std::string, int, float, bool> pattern_rule::get_value(){
   return value;
+}
+
+std::string pattern_rule::get_value_type_name(){
+  switch(value.which()){
+  case 0:
+    return "string";
+  case 1:
+    return "int";
+  case 2:
+    return "float";
+  case 3:
+    return "bool";
+  }
 }
 
 

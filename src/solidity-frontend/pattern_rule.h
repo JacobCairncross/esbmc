@@ -15,12 +15,11 @@ public:
   RuleType rule_type();
   std::string rule_name();
   boost::variant<std::string, int, float, bool> get_value();
-
+  std::string get_value_type_name();
 
   void set_value(boost::variant<std::string, int, float, bool> _value);
 
 private:
-==
   RuleType ruleType;
 
   boost::variant<std::string, int, float, bool> value;

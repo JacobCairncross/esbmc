@@ -23,5 +23,5 @@ public:
 
 protected:
   const nlohmann::json &ast_nodes;
-  bool printValueOrKids(nlohmann::json patternNode, nlohmann::json currentASTNode, int depth);
+  bool recursiveCheck(nlohmann::json patternNode, nlohmann::json currentASTNode, int depth);
 };
